@@ -1,7 +1,7 @@
 const SHEET_ID = PropertiesService.getScriptProperties().getProperty('SHEET_ID');
 const sheet = SpreadsheetApp.openById(SHEET_ID);
 const cache = CacheService.getScriptCache();
-
+const numberOfItems = 250;
 function smallValueBenchmark() {
   const smallValue = createStringByKBs(1);
 
@@ -26,12 +26,73 @@ function bigValueBenchmark() {
 
   // Hot test
   for(let i = 0; i < 250; i++)
-    testCaches(0, bigValue);
+    testCaches(97, bigValue);
   const hotResults = (testCaches(97, bigValue));
 
   const firstEmptyRow = sheet.getRange('Benchmarks!I4:L').getNextDataCell(SpreadsheetApp.Direction.DOWN).getRow() + 1;
   sheet.getRange(`Benchmarks!I${firstEmptyRow}:L${firstEmptyRow}`).setValues([[coldResults.cache.write, hotResults.cache.write, coldResults.cache.read, hotResults.cache.read]]);
   sheet.getRange(`Benchmarks!Y${firstEmptyRow}:AB${firstEmptyRow}`).setValues([[coldResults.sheet.write, hotResults.sheet.write, coldResults.sheet.read, hotResults.sheet.read]]);
+}
+
+function multipleSmallValuesBenchmark() {
+  const smallValue = createStringByKBs(1);
+  const hotResults = {
+    cache: {
+      write: 0,
+      read: 0,
+    },
+    sheet: {
+      write: 0,
+      read:0,
+    },
+  };
+
+  for(let i = 0; i < numberOfItems; i++) {
+    const res = testCaches(i+250, smallValue);
+    hotResults.cache.write += res.cache.write;
+    hotResults.cache.read += res.cache.read;
+    hotResults.sheet.write += res.sheet.write;
+    hotResults.sheet.read += res.sheet.read;
+  }
+  
+  hotResults.cache.write /= numberOfItems;
+  hotResults.cache.read /= numberOfItems;
+  hotResults.sheet.write /= numberOfItems;
+  hotResults.sheet.read /= numberOfItems;
+  const firstEmptyRow = sheet.getRange('Benchmarks!E4:H').getNextDataCell(SpreadsheetApp.Direction.DOWN).getRow() + 1;
+  sheet.getRange(`Benchmarks!E${firstEmptyRow}:H${firstEmptyRow}`).setValues([[hotResults.cache.write, '', hotResults.cache.read, '']]);
+  sheet.getRange(`Benchmarks!U${firstEmptyRow}:X${firstEmptyRow}`).setValues([[hotResults.sheet.write, '', hotResults.sheet.read, '']]);
+}
+
+function multipleBigValuesBenchmark() {
+  const bigValue = createStringByKBs(97);
+  const hotResults = {
+    cache: {
+      write: 0,
+      read: 0,
+    },
+    sheet: {
+      write: 0,
+      read:0,
+    },
+  };
+
+  for(let i = 0; i < numberOfItems; i++) {
+    const res = testCaches(i, bigValue);
+    hotResults.cache.write += res.cache.write;
+    hotResults.cache.read += res.cache.read;
+    hotResults.sheet.write += res.sheet.write;
+    hotResults.sheet.read += res.sheet.read;
+  }
+  
+  hotResults.cache.write /= numberOfItems;
+  hotResults.cache.read /= numberOfItems;
+  hotResults.sheet.write /= numberOfItems;
+  hotResults.sheet.read /= numberOfItems;
+
+  const firstEmptyRow = sheet.getRange('Benchmarks!M4:P').getNextDataCell(SpreadsheetApp.Direction.DOWN).getRow() + 1;
+  sheet.getRange(`Benchmarks!M${firstEmptyRow}:P${firstEmptyRow}`).setValues([[hotResults.cache.write, '', hotResults.cache.read, '']]);
+  sheet.getRange(`Benchmarks!AC${firstEmptyRow}:AF${firstEmptyRow}`).setValues([[hotResults.sheet.write, '', hotResults.sheet.read, '']]);
 }
 
 function testCaches(key, value) {
